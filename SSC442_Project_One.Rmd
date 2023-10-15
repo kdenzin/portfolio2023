@@ -1,0 +1,159 @@
+---
+title: "SSC 442: Project 1"
+author: "Katie Denzin, Shrishti Jalan, and Joon Chung"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  pdf_document:
+      pandoc_args: ["--extract-media", "."]
+urlcolor: blue
+---
+
+
+```{r setup, include=TRUE, echo = FALSE}
+# Leave this chunk as it is. It sets defaults for subsequent chunks.
+# The "echo" option tells Rmarkdown whether or not it should show the code in the chunk.
+# Setting echo = TRUE outputs both the code and the results
+knitr::opts_chunk$set(echo = TRUE,
+                      collapse = TRUE,
+                      warning = FALSE, message = FALSE, error = FALSE,
+                      fig.align = 'center')
+```
+
+
+
+```{r echo = FALSE}
+library(tidyverse)
+library(lubridate)
+rats_raw <- read_csv("Rat_Sightings.csv", na = c("", "NA", "N/A"))
+# If you get an error that says "All formats failed to parse. No formats
+# found", it's because the mdy_hms function couldn't parse the date. The date
+# variable *should* be in this format: "04/03/2017 12:00:00 AM", but in some
+# rare instances, it might load without the seconds as "04/03/2017 12:00 AM".
+# If there are no seconds, use mdy_hm() instead of mdy_hms().
+rats_clean <- rats_raw %>%
+  rename(created_date = `Created Date`,
+         location_type = `Location Type`,
+         borough = Borough) %>%
+  mutate(created_date = mdy_hms(created_date)) %>%
+  mutate(sighting_year = year(created_date),
+         sighting_month = month(created_date),
+         sighting_day = day(created_date),
+         sighting_weekday = wday(created_date, label = TRUE, abbr = FALSE)) %>%
+  filter(borough != "Unspecified")
+
+
+custom_colors <- c("#d2467a", "#c0d246", "#187699", "#46d29e", "#5846d2","#467ad2","#eb9d50", "#d2467a", "#c0d246", "#187699", "#46d29e", "#5846d2","#467ad2","#eb9d50","#d2467a", "#c0d246", "#187699", "#46d29e", "#5846d2","#467ad2","#eb9d50","#d2467a", "#c0d246", "#187699", "#46d29e", "#5846d2","#467ad2","#eb9d50")
+```
+
+
+# Part 1: New York City Rat Problem Memo 
+
+
+## Introduction
+
+New York City has had a rat problem for many decades now, and the proposed solutions for this have ranged from garbage control to infertility treatments, but the problem has persisted. This memo details the extent of the rat infestation problem in the city of New York over the last decade and focuses the attention of the reader on certain communities where the issue is most prominent. To quote Jessica Tisch, New York City’s sanitation commissioner, "The rats don't run this city, we do". 
+
+
+![New York City’s sanitation commissioner Jessica Tisch, October 17 2022](/Users/shrishtijalan/Desktop/RatsNYC.png){width=40%, height=40%} 
+
+-----
+
+\newpage
+
+## A. The problem over the years
+
+Let's start by first looking at how the number of rat sightings changed over the last decade to understand the extent of the problem.
+
+```{r echo = FALSE, fig.height=60}
+
+rats_over_time = rats_clean %>% 
+  group_by(sighting_year) %>% 
+  summarize(n = n())
+```
+```{r echo = FALSE}
+ggplot(rats_over_time, aes(x=sighting_year, y=n)) + 
+  geom_line(size = 1, color = "#187699") + 
+  scale_x_continuous(breaks = c(2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020)) +
+  labs(title = "New York City Rat Sightings Over Time") +
+  xlab("Year of Sighting") +
+  ylab("Number of Sightings") + 
+  theme_minimal() + theme(legend.position = "none")
+
+```
+This graph shows us that there was a huge spike in the number of rat sightings in 2013, followed by a staggered decline starting in 2017. In 2020, at the end of the decade,while the number of rat sightings was down substantially from the peak, the number still remains alarmingly high. \newline
+While this graph tells us that the problem persists, it does not tell us a lot about the where specifically our action should be directed.
+
+-----
+
+\newpage
+
+## B. Breaking it down by boroughs
+
+```{r echo = FALSE}
+rats_borough = rats_clean %>% 
+  group_by(sighting_year, borough) %>% 
+  summarise(n = n())
+
+ggplot(rats_borough, aes(x=sighting_year, y=n, color = borough)) + 
+  geom_line( ) + 
+  scale_x_continuous(breaks = c(2010, 2015, 2020)) +
+  labs(title = "NYC Rat Sightings Over Time by Year and Borough", x = "Year of Sighting", y = "Number of Sightings") +
+  facet_wrap(~borough, ncol = 2) + 
+  theme_minimal() +  theme(legend.position = "none")+
+  scale_color_manual(values = custom_colors)
+
+```
+This visualization shows us that while most boroughs are affected by rodent infestations, Brooklyn and Manhattan are worse off than the others. This could partly be due to the dense population concentration in these boroughs. \newline
+Let's further inspect the data to identify which communities within Brooklyn are most affected.
+
+-----
+
+\newpage
+
+## C. Breaking it down by community board- Brooklyn. 
+
+```{r echo = FALSE, fig.height=5}
+rats_brook = rats_clean %>% 
+  rename(community = "Community Board") %>% 
+  filter(borough == "BROOKLYN") %>% 
+  group_by(community)
+
+ggplot(rats_brook, aes(x=community, fill = community)) + 
+  geom_bar(stat = "count") + 
+  coord_flip() + 
+  labs(title = "Rat Sightings by Community in Brooklyn", subtitle = "Combined sightings from 2010-2020", y = "Number of Sightings", x = "Commmunity Board") +
+  theme_minimal() +theme(legend.position = "none")+
+  scale_fill_manual(values = custom_colors) 
+```
+
+A quick look at this graph tells us that Brooklyn's 3rd community board regulated area is very badly affected by the rodent infestation. Another thing to note is that there is ambiguity in the data since there are a lot of data points that fall under the "unspecified-Brooklyn" category. While the ambiguity does not help us narrow down a specific community board, it does still tell us that the rat infestation problem in Brooklyn is severe and needs attention. \newline
+
+Here is a map of Brooklyn divided by community boards for your reference:
+
+
+![Brooklyn - Community Boards \newline Note: Community board 55 includes the Joint Interest Area of Prospect Park.](https://www.nyc.gov/assets/communityboards/images/content/pages/brooklyn-boards.png){width=30%, height=30%}
+
+
+
+
+\newpage
+## D. Policy Recommendation
+Our policy recommendation is to implement a pilot program in Brooklyn 03 for more sanitation and analyze the results to further implement the program in all of NYC. This includes, but is not limited to, garbage disposal education, more investment in health and sanitation, and community cleaning drives. Involving the citizens in these efforts can be beneficial as it encourages community involvement in public policy, and also allows the city to reach more people at a grassroots level.
+
+-----
+
+\newpage 
+
+#  Part 2: Data Collection
+
+## Data Source 1 - [Walkability Index: U.S. Environmental Protection Agency](https://catalog.data.gov/dataset/smart-location-database1) 
+
+The walkability index data set from the United States Environmental Protection (EPA) shows walkability scores for all block groups, which evaluated specific indicators from the Smart Location Database. These indicators are known to influence walking habits. We can create customized walkability indices for smaller areas like states, metropolitan regions, or cities using the Smart Location Database. The variables that we are interested in using in this data set are the intersection density (higher intersection density is correlated with more walk trips), proximity to transit stops (shorter distances correlate with more walk trips), and diversity of land uses (higher values correlate with more walk trips). For this project idea, we could include desirable neighborhoods to live in. The walkability index is crucial as it provides valuable insights into urban planning and public health, enabling communities to create pedestrian-friendly environments, encourage physical activity, reduce pollution, and enhance overall quality of life.
+
+## Data Source 2 - [Michigan Education Funding: MI School Data](https://www.mischooldata.org/school-level-expenditure-report/)
+School funding can be an important factor in children’s experiences and future. The state of Michigan collects and releases plenty of data regarding school funding that can be analyzed. The above data set from the website MISchoolData breaks down different sources of expenditure per pupil per specific school in Michigan. This dataset itself could be used to find the distribution of school expenditures and where funding comes from. It can also be supplemented with other data from the website including test scores, attendance, and graduation rates to find how school funding affects those measures. Additionally, adding geographic data for each school could provide insights as to regional effects of school funding or where in the state is funded at a higher rate and why. 
+
+## Data Source 3 - [311 Calls in New York: NYCOpenData](https://data.cityofnewyork.us/Social-Services/311-Service-Requests-from-2010-to-Present/erm2-nwe9)
+This dataset of 311 calls from the website NYCOpenData details information about calls received to the line from 2010, and has been updated daily since. There is roughly 3.4 million rows of data, but has a lot of potential to focus on specific issues faced by New York residents including rat sightings, like in this project, levels of noise, illegal trash dumping, and more. Some of the variables we can focus on are complaint type, location, New York City department involved, and the date that it occurred. Project ideas include desirable neighborhoods to live in, which Borough is the noisiest, what areas have the largest police presence, or any of the change in the frequency of complaint types over time.
+
+------
