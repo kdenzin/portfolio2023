@@ -1,4 +1,4 @@
-# portfolio2026
+# Katherine Denzin's Portfolio!
 
 Part One:
 Select projects from my coursework as a computer science, data science, and social science quantitative data analytics minor.
